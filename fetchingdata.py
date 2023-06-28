@@ -95,10 +95,10 @@ def request_signal(user_id):
         with conn.cursor() as cursor:
             cursor.execute("UPDATE users SET requested_signal = TRUE WHERE id = %s", (user_id,))
             conn.commit()
-def add_signal(image, text_of_message, dt, de):
+def add_signal( text_of_message, dt, de):
     with get_connection() as conn:
         with conn.cursor() as cursor:
-            cursor.execute("INSERT INTO signals (image, text, start_date, end_date) VALUES (%s, %s, %s, %s)", (image, text_of_message, dt, de))
+            cursor.execute("INSERT INTO signals (image, text, start_date, end_date) VALUES (123, %s, %s, %s)", ( text_of_message, dt, de))
             conn.commit()
 def reset_signal_request(user_id):
     with get_connection() as conn:

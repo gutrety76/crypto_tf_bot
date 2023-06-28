@@ -23,10 +23,10 @@ user_photos = {}
 bot_token = os.getenv("TG_TOKEN")
 bot = telebot.TeleBot(bot_token)
 
-def handle_photo(message,text):
+def handle_photo(message):
    
     
-    text_of_message,date_of_start,date_of_end = text.split("+")
+    text_of_message,date_of_start,date_of_end = message.text.split("+")
     date_of_st = date_of_start.split(":")
     date_of_en = date_of_end.split(":")
     dt = datetime.datetime(int(date_of_st[0]), int(date_of_st[1]), int(date_of_st[2]), int(date_of_st[3]), int(date_of_st[4]))
@@ -34,7 +34,7 @@ def handle_photo(message,text):
     
     try:
 
-        add_signal(message.photo[-1].file_id, text_of_message, dt, de)
+        add_signal(text_of_message, dt, de)
         bot.send_message(chat_id=message.chat.id, text="Сигнал создан")
     except e:
         print(e)
@@ -42,8 +42,8 @@ def create_keyboard_with_courses():
     markup = types.InlineKeyboardMarkup()
     
     markup.add(types.InlineKeyboardButton(text="📈Получить вход", callback_data="getsignal"))
-    markup.add(types.InlineKeyboardButton(text="💬Обратная связь", callback_data="support"))
-    markup.add(types.InlineKeyboardButton(text="👨‍💻Помощь/FAQ", callback_data="course-"))
+    markup.add(types.InlineKeyboardButton(text="💬Тех. Поддержка", callback_data="support"))
+    #markup.add(types.InlineKeyboardButton(text="👨‍💻FAQ", callback_data="faq"))
     return markup
 
 
@@ -54,23 +54,27 @@ def echo_message(message):
     
     if message.text.lower() == "/start":
         start(message)
-        user_states[user_id] = "NORMAL"  
+        user_states[user_id] = "NORMAL"
     else:
         if message.chat.id == -1001511072724:
             if message.text == "/createsignal":
-                bot.send_message(chat_id=message.chat.id, text="Отправь одним сообщением в формате: фотографию,текст/year:month:day:hour:minute/year:month:day:hour:minute" )
+                bot.send_message(chat_id=message.chat.id, text="Отправь одним сообщением в формате: текст+year:month:day:hour:minute+year:month:day:hour:minute" )
                 user_states[user_id] = "WAITING_FOR_PHOTO"
+            if message.text == "/closesignal":
+                markup = types.InlineKeyboardMarkup()
+                markup.add(types.InlineKeyboardButton(text="Сигнал был удачный", callback_data="goodsignal"))
+                markup.add(types.InlineKeyboardButton(text="Сигнал был неудачный", callback_data="badsignal"))
+                
+                bot.send_message(chat_id=message.chat.id, text="Выберите опцию", reply_markup=markup)
+            if user_states.get(user_id) == "WAITING_FOR_PHOTO":
+                
+                handle_photo(message)
 
+        user_states[user_id] = "NORMAL"
 @bot.message_handler(content_types=['photo'])
 def handle_message_with_photo(message):
     user_id = message.chat.id
     
-    print(user_states)
-    if user_states.get(user_id) == "WAITING_FOR_PHOTO":
-        if message.caption:
-            handle_photo(message, message.caption)
-
-        user_states[user_id] = "NORMAL"
     if user_states.get(user_id) == "WAITING_FOR_FIRST_SCREEN":
         markup = types.InlineKeyboardMarkup()
         markup.add()
@@ -88,9 +92,9 @@ def handle_message_with_photo(message):
         if len(user_photos[user_id]) >= 2:
             markup = types.InlineKeyboardMarkup()
             markup.add()
-            markup.add(types.InlineKeyboardButton(text="Подтвердить", callback_data=f"fscreen-accept-{user_id}"))
-            markup.add(types.InlineKeyboardButton(text="Отклонить", callback_data=f"fscreen-decline-{user_id}"))
-            markup.add(types.InlineKeyboardButton(text="Заблокировать", callback_data=f"fscreen-userblock-{user_id}"))
+            markup.add(types.InlineKeyboardButton(text="Подтвердить", callback_data=f"sscreen-accept-{user_id}"))
+            markup.add(types.InlineKeyboardButton(text="Отклонить", callback_data=f"sscreen-decline-{user_id}"))
+            markup.add(types.InlineKeyboardButton(text="Заблокировать", callback_data=f"sscreen-userblock-{user_id}"))
             bot.send_photo(chat_id=-1001511072724, photo=user_photos[user_id][0])
             bot.send_photo(chat_id=-1001511072724, photo=user_photos[user_id][1], reply_markup=markup)
             bot.send_message(chat_id = user_id, text = "Скриншоты отправлены!")
@@ -115,6 +119,14 @@ def start(message):
 def callback_query(call):
     prefix = call.data.split("-")
     user_id = call.message.chat.id
+    if len(prefix) > 2:
+        prefix[2] = int(prefix[2])
+
+    if prefix[0] == "support":
+        bot.send_message(chat_id=user_id, text="Напишите ваш вопрос напрямую менеджеру MarketView:\n@MarketView_Manager")
+    #if prefix[0] == "faq":
+    #    bot.send_message(chat_id=user_id, parse_mode="MARKDOWN", text="*1) Вопрос:* Что происходит, если сработал Stop Loss?\n" + 
+    #                     "*Ответ:* ")
     
     if prefix[0] == "getsignal":
         check = check_user_status(user_id)
@@ -129,19 +141,38 @@ def callback_query(call):
                 + "\n- график.\n- текстовое описание.\n- вход, take profit, stop loss.")
         else:
             bot.send_message(chat_id = user_id, text = "Вы заблокированы! Чтобы подать апеляцию напишите в тех. поддержку.")
-    elif prefix[0] == "reject":
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("Главное меню", callback_data=f"/start"))
-        bot.send_message(chat_id=course_title, text="Ваше подтверждение было отклонено.",  reply_markup=markup)
+    ###### Closing of signal 
+    elif prefix[0] == "goodsignal":
+        for key, value in user_states.items():
+            if value == 'WAITING_FOR_RESPOND_FROM_ADMINS':
+                bot.send_message(chat_id=key,parse_mode="MARKDOWN", text="Теперь отправьте скриншот полученной прибыли!\nТакже вам нужно отправить 50% от прибыли\nСеть: Tron (TRC20)\nАдрес: `TBputbak1tfsJ3CThQjtReEu23aydRbYcG`")
+                user_states[key] = "WAITING_FOR_SECOND_SCREEN"
+    elif prefix[0] == "badsignal":
+        for key, value in user_states.items():
+            if value == 'WAITING_FOR_RESPOND_FROM_ADMINS':
+                bot.send_message(chat_id=key, text="Сигнал оказался неудачным. Ожидайте следующего сигнала")
+                user_states[key] = "NORMAL"
+    #######Handling of 1 screen
     elif prefix[0] == "fscreen" and prefix[1] == "accept":
-        bot.send_message(chat_id=prefix[2], parse_mode="MARKDOWN",  text="Ваш скриншот захода в позицию был одобрен. Теперь отправьте скриншот полученной прибыли!\nТакже вам нужно отправить 20% от прибыли\nСеть: Tron (TRC20)\nАдрес: `TBputbak1tfsJ3CThQjtReEu23aydRbYcG`")
-        
-        user_states[int(prefix[2])] = "WAITING_FOR_SECOND_SCREEN"
+        bot.send_message(chat_id=prefix[2], parse_mode="MARKDOWN",  text="Ваш скриншот захода в позицию был одобрен.")
+
+        user_states[int(prefix[2])] = "WAITING_FOR_RESPOND_FROM_ADMINS"
     elif prefix[0] == "fscreen" and prefix[1] == "decline":
         bot.send_message(chat_id=prefix[2], text="Ваш скриншот захода в позицию не был одобрен.")
     elif prefix[0] == "fscreen" and prefix[1] == "userblock":
         bot.send_message(chat_id=prefix[2], text = "Вы заблокированы. Чтобы подать апеляцию напишите в тех. поддержку.")
-        
+        block_user(prefix[2])
+    elif prefix[0] == "sscreen" and prefix[1] == "accept":
+        markup = create_keyboard_with_courses()
+        bot.send_message(chat_id=prefix[2], reply_markup=markup, parse_mode="MARKDOWN",  text="Ваши скриншоты подтверждения оплаты были одобрены. Теперь вы можете получить еще один сигнал.")
+        user_states[prefix[2]] = "NORMAL"
+    elif prefix[0] == "sscreen" and prefix[1] == "decline":
+        bot.send_message(chat_id=prefix[2], text="Ваши скриншоты подтверждения оплаты не были одобрены. Сделайте более качественный скриншот или обратитесь в тех. поддержку!")
+    elif prefix[0] == "sscreen" and prefix[1] == "userblock":
+        bot.send_message(chat_id=prefix[2], text = "Вы заблокированы. Чтобы подать апеляцию напишите в тех. поддержку.")
+        block_user(prefix[2])
+
+
 
 @bot.message_handler(commands=['help'])
 def help_command(message):
@@ -165,7 +196,7 @@ def send_signal_to_all_unblocked_users():
                     dt = signal["start_date"].strftime('%Y_%m_%d-%H:%M')
                     de = signal["end_date"].strftime('%Y_%m_%d-%H:%M')
                     markup = create_keyboard_with_courses()
-                    bot.send_photo(chat_id=user['id'], photo=signal['image'])
+                    
 
                     bot.send_message(chat_id=user['id'], text=signal["text"] + "\n" + dt + ' - ' + de + "(UTC+3)" , reply_markup=markup)
                     bot.send_message(chat_id=user['id'], text = "Отправьте скриншот подтверждающий вход в позицию")
