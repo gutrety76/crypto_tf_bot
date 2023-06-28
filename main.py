@@ -70,6 +70,30 @@ def echo_message(message):
                 markup.add(types.InlineKeyboardButton(text="Сигнал был неудачный", callback_data="badsignal"))
                 
                 bot.send_message(chat_id=message.chat.id, text="Выберите опцию", reply_markup=markup)
+            elif message.text == "/ad":
+                
+                markup = types.InlineKeyboardMarkup()
+                url_button = types.InlineKeyboardButton(text="ПЕРЕЙТИ В БОТА ✅", url="https://t.me/MarketViewTradingBot")
+                markup.add(url_button)
+
+                text = """Приватная торговля с командой Market View 🔥
+
+▪️ Торговля будет проходить с автоматизированным ботом Telegram, где вы сможете автоматически получать:
+
+- приватную аналитику от нашей команды.
+- личные входы в позиции от трейдеров команды MV.
+- личная консультация от нашей команды касательно ваших открытых позиций.
+- уведомления о предстоящих событиях на рынке быстрее всех в крипто комьюнити.
+
+▪️Торговля с ботом абсолютно бесплатная, все условия торговли вы можете прочесть после команды /start в Telegram боте: @MarketViewTradingBot
+
+▪️Если у вас остались какие-либо вопросы касательно Приватной Торговли с командой Market View, вы всегда можете написать главному менеджеру нашего канала - @MarketView_Manager
+
+Зарегистрироваться в боте ⬇️"""
+    
+                photo_url = 'https://i.ibb.co/N12qvc0/ad.jpg' # replace with the URL or file_id of your photo
+    
+                bot.send_photo(chat_id=message.chat.id,photo=photo_url, caption=text, reply_markup=markup)
             elif user_states.get(message.chat.id) == "WAITING_FOR_PHOTO":
                 
                 handle_photo(message)
@@ -90,7 +114,9 @@ def handle_message_with_photo(message):
     if user_states.get(user_id) == "WAITING_FOR_SECOND_SCREEN":
         if user_id not in user_photos:
             user_photos[user_id] = [] 
-        if len(user_photos[user_id]) == 0:
+        if len(user_photos[user_id]) == 1:
+            user_photos[user_id].append(message.photo[-1].file_id)
+        elif len(user_photos[user_id]) == 0:
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton(text="✅ Оплата совершена", callback_data=f"oplatasovershena-{user_id}"))
             bot.send_message(chat_id = user_id,reply_markup=markup, parse_mode="MARKDOWN",text = "Оплата производится стейблкойном (USDT) по адресу кошелька.\n" +
@@ -99,8 +125,7 @@ def handle_message_with_photo(message):
                              "Адрес: `TBputbak1tfsJ3CThQjtReEu23aydRbYcG`\n\n" +
                              "*Вы платите физическому лицу. Деньги поступят на счёт получателя.*")
             user_photos[user_id].append(message.photo[-1].file_id)
-        if len(user_photos[user_id]) == 1:
-            user_photos[user_id].append(message.photo[-1].file_id)
+        
         if len(user_photos[user_id]) >= 2:
             markup = types.InlineKeyboardMarkup()
             markup.add()
@@ -109,7 +134,7 @@ def handle_message_with_photo(message):
             markup.add(types.InlineKeyboardButton(text="Заблокировать", callback_data=f"sscreen-userblock-{user_id}"))
             bot.send_photo(chat_id=-1001511072724, photo=user_photos[user_id][0])
             bot.send_photo(chat_id=-1001511072724, photo=user_photos[user_id][1], reply_markup=markup)
-            bot.send_message(chat_id = user_id, text = "Скриншоты отправлены!")
+            bot.send_message(chat_id = user_id, text = "Скриншоты отправлены ✅! Ожидайте их обработки")
 def start(message):
     user_id = message.chat.id
     user = get_or_create_user(user_id)
@@ -195,6 +220,9 @@ def callback_query(call):
 def help_command(message):
     """Displays info on how to use the bot."""
     bot.send_message(chat_id=message.chat.id, text="Напиши /start чтобы начать использовать бот.")
+
+
+
 
 
 def send_signal_to_all_unblocked_users():
