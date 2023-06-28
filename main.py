@@ -25,7 +25,7 @@ bot = telebot.TeleBot(bot_token)
 
 def handle_photo(message):
    
-    
+    print(123)
     text_of_message,date_of_start,date_of_end = message.text.split("+")
     date_of_st = date_of_start.split(":")
     date_of_en = date_of_end.split(":")
@@ -51,26 +51,30 @@ def create_keyboard_with_courses():
 @bot.message_handler(func=lambda message: True)
 def echo_message(message):
     user_id = message.chat.id
-    
+    print(user_states)
+    print(message.text)
     if message.text.lower() == "/start":
         start(message)
-        user_states[user_id] = "NORMAL"
+        if user_id not in user_states:
+            user_states[user_id] = "NORMAL"
+        
     else:
         if message.chat.id == -1001511072724:
+            
             if message.text == "/createsignal":
+                user_states[message.chat.id] = "WAITING_FOR_PHOTO"
                 bot.send_message(chat_id=message.chat.id, text="Отправь одним сообщением в формате: текст+year:month:day:hour:minute+year:month:day:hour:minute" )
-                user_states[user_id] = "WAITING_FOR_PHOTO"
-            if message.text == "/closesignal":
+            elif message.text == "/closesignal":
                 markup = types.InlineKeyboardMarkup()
                 markup.add(types.InlineKeyboardButton(text="Сигнал был удачный", callback_data="goodsignal"))
                 markup.add(types.InlineKeyboardButton(text="Сигнал был неудачный", callback_data="badsignal"))
                 
                 bot.send_message(chat_id=message.chat.id, text="Выберите опцию", reply_markup=markup)
-            if user_states.get(user_id) == "WAITING_FOR_PHOTO":
+            elif user_states.get(message.chat.id) == "WAITING_FOR_PHOTO":
                 
                 handle_photo(message)
 
-        user_states[user_id] = "NORMAL"
+        
 @bot.message_handler(content_types=['photo'])
 def handle_message_with_photo(message):
     user_id = message.chat.id
@@ -199,7 +203,9 @@ def send_signal_to_all_unblocked_users():
                     
 
                     bot.send_message(chat_id=user['id'], text=signal["text"] + "\n" + dt + ' - ' + de + "(UTC+3)" , reply_markup=markup)
-                    bot.send_message(chat_id=user['id'], text = "Отправьте скриншот подтверждающий вход в позицию")
+                    bot.send_message(chat_id=user['id'],parse_mode="MARKDOWN", text = "📊 Прикрепите скриншот вашей открытой позиции.\n" + 
+
+"‼️ На фото должны быть четко видны: *объем, торговая пара и текущий P&L.*\n"+"🚫 За спам вы можете быть заблокированы!")
                     user_states[user['id']] = "WAITING_FOR_FIRST_SCREEN"
                     reset_signal_request(user['id'])
                     #block_user(user['id'])
