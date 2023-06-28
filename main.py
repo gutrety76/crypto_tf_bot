@@ -81,17 +81,25 @@ def handle_message_with_photo(message):
     
     if user_states.get(user_id) == "WAITING_FOR_FIRST_SCREEN":
         markup = types.InlineKeyboardMarkup()
-        markup.add()
+        
         markup.add(types.InlineKeyboardButton(text="Подтвердить", callback_data=f"fscreen-accept-{user_id}"))
         markup.add(types.InlineKeyboardButton(text="Отклонить", callback_data=f"fscreen-decline-{user_id}"))
         markup.add(types.InlineKeyboardButton(text="Заблокировать", callback_data=f"fscreen-userblock-{user_id}"))
         bot.send_photo(chat_id=-1001511072724, photo=message.photo[-1].file_id, reply_markup=markup)
-        bot.send_message(chat_id = user_id, text = "Скриншот отправлен!")
+        bot.send_message(chat_id = user_id, text = "Скриншот отправлен! Находится в обработке⏳")
     if user_states.get(user_id) == "WAITING_FOR_SECOND_SCREEN":
         if user_id not in user_photos:
             user_photos[user_id] = [] 
-        if len(user_photos[user_id]) <= 1:
-            
+        if len(user_photos[user_id]) == 0:
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton(text="✅ Оплата совершена", callback_data=f"oplatasovershena-{user_id}"))
+            bot.send_message(chat_id = user_id,reply_markup=markup, parse_mode="MARKDOWN",text = "Оплата производится стейблкойном (USDT) по адресу кошелька.\n" +
+                             "Сумма: **50% от прибыли**\n" +
+                             "Сеть: **Tron (TRC20)**\n" +
+                             "Адрес: `TBputbak1tfsJ3CThQjtReEu23aydRbYcG`\n\n" +
+                             "*Вы платите физическому лицу. Деньги поступят на счёт получателя.*")
+            user_photos[user_id].append(message.photo[-1].file_id)
+        if len(user_photos[user_id]) == 1:
             user_photos[user_id].append(message.photo[-1].file_id)
         if len(user_photos[user_id]) >= 2:
             markup = types.InlineKeyboardMarkup()
@@ -110,14 +118,14 @@ def start(message):
     "▪️ Наш общий бесплатный канал - @MarketView_Official.\n"+
     "▪️ Свинг трейдинг, скальпинг, спотовая торговля, Smart Money анализ и много полезной инфы сразу в одной подписке!\n" +
     "▪️ Торговля с нашей командой абсолютно БЕСПЛАТНАЯ.\n"+
-    "Не нужно платить за единоразовую подписку на Приватный Канал, это не выгодно и нет гарантий окупа!\n" + 
+    "Не нужно платить за единоразовую подписку на Приватный Канал, это не выгодно и нет гарантий окупа!\n\n" + 
     "Как это работает? \n\n"+
     "- заходите в указанную позицию на своем аккаунте Binance (или другой крипто биржи)\n"+
     "- прикрепляете скриншот открытой позиции в бота.\n"+
     "- после закрытия позиции отправляете квитанцию о закрытом ордере.\n"+
     "- скидываете 50% прибыли в USDT через сеть TRC20.\n"+
     "- отправляете квитанцию платежа: скриншот или фото.", reply_markup=markup)
-    #bot.send_message(chat_id=message.chat.id, text=f"{message.chat.id}Выбери интересующий курс:", reply_markup=markup)
+   
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
@@ -128,9 +136,6 @@ def callback_query(call):
 
     if prefix[0] == "support":
         bot.send_message(chat_id=user_id, text="Напишите ваш вопрос напрямую менеджеру MarketView:\n@MarketView_Manager")
-    #if prefix[0] == "faq":
-    #    bot.send_message(chat_id=user_id, parse_mode="MARKDOWN", text="*1) Вопрос:* Что происходит, если сработал Stop Loss?\n" + 
-    #                     "*Ответ:* ")
     
     if prefix[0] == "getsignal":
         check = check_user_status(user_id)
@@ -146,19 +151,27 @@ def callback_query(call):
         else:
             bot.send_message(chat_id = user_id, text = "Вы заблокированы! Чтобы подать апеляцию напишите в тех. поддержку.")
     ###### Closing of signal 
+    elif prefix[0] == "oplatasovershena":
+        bot.send_message(chat_id=int(prefix[1]), text="💸 Оплатили?\n\n👌🏻 Тогда отправьте сюда картинкой(макс. 1 картинка) квитанцию платежа: скриншот или фото.\n\n‼️ На квитанции должны быть четко видны: дата, время и сумма платежа.")
     elif prefix[0] == "goodsignal":
         for key, value in user_states.items():
             if value == 'WAITING_FOR_RESPOND_FROM_ADMINS':
-                bot.send_message(chat_id=key,parse_mode="MARKDOWN", text="Теперь отправьте скриншот полученной прибыли!\nТакже вам нужно отправить 50% от прибыли\nСеть: Tron (TRC20)\nАдрес: `TBputbak1tfsJ3CThQjtReEu23aydRbYcG`")
+                bot.send_message(chat_id=key,parse_mode="MARKDOWN", text="✅ **Take Profit** по торговой паре был успешно отработан.\n\n" + 
+                                 "🟢 Отправьте скриншот закрытого ордера.(макс. 1 картинка)\n\n" +
+                                 "‼️ На квитанции должны быть четко видны: **дата, время и реализованная прибыль.**")
                 user_states[key] = "WAITING_FOR_SECOND_SCREEN"
     elif prefix[0] == "badsignal":
         for key, value in user_states.items():
             if value == 'WAITING_FOR_RESPOND_FROM_ADMINS':
-                bot.send_message(chat_id=key, text="Сигнал оказался неудачным. Ожидайте следующего сигнала")
+                markup = types.InlineKeyboardMarkup()
+    
+                markup.add(types.InlineKeyboardButton(text="📈Получить вход", callback_data="getsignal"))
+                markup.add(types.InlineKeyboardButton(text="💬Тех. Поддержка", callback_data="support"))
+                bot.send_message(chat_id=key, reply_markup=markup, text="Сработал stop loss⛔️. Со следующей успешной сделки вы не будете отправлять % прибыли нашей команде 👌")
                 user_states[key] = "NORMAL"
     #######Handling of 1 screen
     elif prefix[0] == "fscreen" and prefix[1] == "accept":
-        bot.send_message(chat_id=prefix[2], parse_mode="MARKDOWN",  text="Ваш скриншот захода в позицию был одобрен.")
+        bot.send_message(chat_id=prefix[2], parse_mode="MARKDOWN",  text="Ваш скриншот захода в позицию был одобрен. Ожидаем отработку текущей позиции ✅")
 
         user_states[int(prefix[2])] = "WAITING_FOR_RESPOND_FROM_ADMINS"
     elif prefix[0] == "fscreen" and prefix[1] == "decline":
@@ -205,7 +218,7 @@ def send_signal_to_all_unblocked_users():
                     bot.send_message(chat_id=user['id'], text=signal["text"] + "\n" + dt + ' - ' + de + "(UTC+3)" , reply_markup=markup)
                     bot.send_message(chat_id=user['id'],parse_mode="MARKDOWN", text = "📊 Прикрепите скриншот вашей открытой позиции.\n" + 
 
-"‼️ На фото должны быть четко видны: *объем, торговая пара и текущий P&L.*\n"+"🚫 За спам вы можете быть заблокированы!")
+"‼️ На фото должны быть четко видны: **объем, торговая пара и текущий P&L.**\n"+"🚫 За спам вы можете быть заблокированы!")
                     user_states[user['id']] = "WAITING_FOR_FIRST_SCREEN"
                     reset_signal_request(user['id'])
                     #block_user(user['id'])
