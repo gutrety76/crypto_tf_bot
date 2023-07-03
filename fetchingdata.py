@@ -12,7 +12,20 @@ def get_connection():
         host=os.getenv("DB_HOST"),
         password=os.getenv("DB_PASSWORD")
     )
+def search_all_signals():
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM signals")
+            result = cursor.fetchall()
+            
+            return result
+def delete_exact_signal(id):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(f"DELETE FROM signals WHERE id = {id}")
+            
 
+            conn.commit()
 def get_or_create_user(user_id):
     with get_connection() as conn:
         with conn.cursor() as cursor:
@@ -27,10 +40,9 @@ def get_or_create_user(user_id):
 def get_new_signals(last_check_time):
     with get_connection() as conn:
         with conn.cursor() as cursor:
-
+            
             cursor.execute("SELECT * FROM signals WHERE start_date <= %s AND end_date >= %s", (last_check_time.strftime('%Y-%m-%d %H:%M:%S'),last_check_time.strftime('%Y-%m-%d %H:%M:%S'),))
             rows = cursor.fetchall()
-            
             new_signals = []
             for row in rows:
                 signal = {
@@ -80,6 +92,11 @@ def block_user(user_id):
     with get_connection() as conn:
         with conn.cursor() as cursor:
             cursor.execute("UPDATE users SET status = false WHERE id = %s", (user_id,))
+
+def unblock_user(user_id):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE users SET status = true WHERE id = %s", (user_id,))
 
 
 def check_user_status(user_id):

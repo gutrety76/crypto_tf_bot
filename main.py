@@ -8,7 +8,7 @@ dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 if os.path.exists(dotenv_path):
     load_dotenv(dotenv_path)
 import logging
-from fetchingdata import add_signal, block_user, check_user_status, get_all_requested_users, get_all_unblocked_users, get_new_signals, get_or_create_user, request_signal, reset_signal_request
+from fetchingdata import add_signal, block_user, check_user_status, delete_exact_signal, get_all_requested_users, get_all_unblocked_users, get_new_signals, get_or_create_user, request_signal, reset_signal_request, search_all_signals, unblock_user
 
 import telebot
 from telebot import types
@@ -25,7 +25,7 @@ bot = telebot.TeleBot(bot_token)
 
 def handle_photo(message):
    
-    print(123)
+    
     text_of_message,date_of_start,date_of_end = message.text.split("+")
     date_of_st = date_of_start.split(":")
     date_of_en = date_of_end.split(":")
@@ -70,6 +70,24 @@ def echo_message(message):
                 markup.add(types.InlineKeyboardButton(text="Сигнал был неудачный", callback_data="badsignal"))
                 
                 bot.send_message(chat_id=message.chat.id, text="Выберите опцию", reply_markup=markup)
+            elif message.text == "/deletesignal":
+                res = search_all_signals()
+                
+                markup = types.InlineKeyboardMarkup()
+                
+                for i in res:
+                    
+                    markup.add(types.InlineKeyboardButton(text=i[2], callback_data=f"delete-{i[0]}"))
+                bot.send_message(chat_id=user_id, reply_markup=markup, text="Выбери сигнал для удаления")
+            elif message.text == "/unblockuser":
+                bot.send_message(chat_id=user_id, text= "Напиши id челика")
+                user_states[user_id] = "WAITING_FOR_ID_FOR_UNBAN"
+            elif user_states[user_id] == "WAITING_FOR_ID_FOR_UNBAN":
+                user_states[int(message.text)] = "NORMAL"
+                reset_signal_request(int(message.text))
+                unblock_user(int(message.text))
+                bot.send_message(chat_id=int(message.text), text="Вы разблокированы! Теперь вы можете пользоваться ботом")
+                bot.send_message(chat_id=user_id, text="Пользователь разблокирован!")
             elif message.text == "/ad":
                 
                 markup = types.InlineKeyboardMarkup()
@@ -159,8 +177,11 @@ def callback_query(call):
         prefix[2] = int(prefix[2])
 
     if prefix[0] == "support":
-        bot.send_message(chat_id=user_id, text="Напишите ваш вопрос напрямую менеджеру MarketView:\n@MarketView_Manager")
-    
+        bot.send_message(chat_id=user_id, text=f"Напишите ваш вопрос напрямую менеджеру MarketView:\n@MarketView_Manager. Не забудьте отправить менеджеру ваш id: {user_id}")
+    if prefix[0] == "delete":
+        res = delete_exact_signal(prefix[1])
+        print(res)
+        bot.send_message(chat_id=user_id, text="Сигнал удален")
     if prefix[0] == "getsignal":
         check = check_user_status(user_id)
         if check:
@@ -229,10 +250,11 @@ def send_signal_to_all_unblocked_users():
     
     while True:
         time.sleep(1) 
-        
+       
         new_signals = get_new_signals(last_check_time) 
         last_check_time = datetime.datetime.now()
         for signal in new_signals: 
+            
             all_unblocked_users = get_all_requested_users()  
             for user in all_unblocked_users:
                 try:
