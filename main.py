@@ -71,6 +71,13 @@ def echo_message(message):
                 for key, value in user_photos.items():
                     user_photos[key] = []
                 bot.send_message(chat_id=message.chat.id, text="Выберите опцию", reply_markup=markup)
+            elif message.text == "/createnotification":
+                bot.send_message(chat_id=message.chat.id, text="След сообщение будет текстом уведомления для всех" )
+                user_states[message.chat.id] = "WAITING_FOR_NOTIFICATION"
+            elif user_states[message.chat.id] == "WAITING_FOR_NOTIFICATION":
+                for key, value in user_states.items():
+                    bot.send_message(chat_id=key, text=message.text)
+                user_states[message.chat.id] = "NORMAL"
             elif message.text == "/deletesignal":
                 res = search_all_signals()
                 
@@ -97,20 +104,17 @@ def echo_message(message):
                 url_button = types.InlineKeyboardButton(text="ПЕРЕЙТИ В БОТА ✅", url="https://t.me/MarketViewTradingBot")
                 markup.add(url_button)
 
-                text = """*Приватная торговля с командой Market View*🔥
+                text = """▫️ Добро пожаловать в MarketViewBot.
 
-▪ Торговля будет проходить с автоматизированным ботом *Telegram*, где вы сможете автоматически получать:
+▪️ Ежедневные *Premium Intraday Входы* за концепцией Smart Money.
 
-- приватную аналитику от нашей команды.
-- личные входы в позиции от трейдеров команды *MV*.
-- личная консультация от нашей команды касательно ваших открытых позиций.
-- уведомления о предстоящих событиях на рынке быстрее всех в крипто комьюнити.
+Как это работает? 
 
-▪️Торговля с ботом абсолютно *бесплатная*, все условия торговли вы можете прочесть после команды /start в Telegram боте: [@MarketViewTradingBot](https://t.me/MarketViewTradingBot)
-
-▪️Если у вас остались какие-либо вопросы касательно *Приватной Торговли* с командой *Market View*, вы всегда можете написать главному менеджеру нашего канала - [@MarketView_Manager](https://t.me/MarketView_Manager)
-
-*Зарегистрироваться в боте* ⬇️"""
+- заходите в указанную позицию на своем аккаунте Binance (или другой крипто биржи)
+- прикрепляете скриншот открытой позиции в бота.
+- после закрытия позиции отправляете квитанцию о закрытом ордере.
+- скидываете *50% прибыли* в *USDT через сеть TRC20*.
+- отправляете квитанцию платежа: скриншот или фото."""
     
                 photo_url = 'https://i.ibb.co/N12qvc0/ad.jpg' # replace with the URL or file_id of your photo
     
@@ -223,11 +227,12 @@ def callback_query(call):
     #######Handling of 1 screen
     elif prefix[0] == "fscreen" and prefix[1] == "accept":
         bot.send_message(chat_id=prefix[2], parse_mode="MARKDOWN",  text="Ваш скриншот захода в позицию был одобрен. Ожидаем отработку текущей позиции ✅")
-
+        bot.send_message(chat_id=1001511072724, text="Одобрено")
         user_states[int(prefix[2])] = "WAITING_FOR_RESPOND_FROM_ADMINS"
         user_photos[key] = []
     elif prefix[0] == "fscreen" and prefix[1] == "decline":
         bot.send_message(chat_id=prefix[2], text="Ваш скриншот захода в позицию не был одобрен.")
+        bot.send_message(chat_id=1001511072724, text="Отклонено")
         user_photos[key] = []
     elif prefix[0] == "fscreen" and prefix[1] == "userblock":
         bot.send_message(chat_id=prefix[2], text = "Вы заблокированы. Чтобы подать апеляцию напишите в тех. поддержку.")
@@ -236,10 +241,12 @@ def callback_query(call):
     elif prefix[0] == "sscreen" and prefix[1] == "accept":
         markup = create_keyboard_with_courses()
         bot.send_message(chat_id=prefix[2], reply_markup=markup, parse_mode="MARKDOWN",  text="Ваши скриншоты подтверждения оплаты были одобрены. Теперь вы можете получить еще один сигнал.")
+        bot.send_message(chat_id=1001511072724, text="Принято")
         user_states[prefix[2]] = "NORMAL"
         user_photos[key] = []
     elif prefix[0] == "sscreen" and prefix[1] == "decline":
         bot.send_message(chat_id=prefix[2], text="Ваши скриншоты подтверждения оплаты не были одобрены. Сделайте более качественный скриншот или обратитесь в тех. поддержку!")
+        bot.send_message(chat_id=1001511072724, text="Отклонено")
         user_photos[key] = []
     elif prefix[0] == "sscreen" and prefix[1] == "userblock":
         bot.send_message(chat_id=prefix[2], text = "Вы заблокированы. Чтобы подать апеляцию напишите в тех. поддержку.")
