@@ -12,6 +12,13 @@ def get_connection():
         host=os.getenv("DB_HOST"),
         password=os.getenv("DB_PASSWORD")
     )
+def get_all_users():
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM users")
+            result = cursor.fetchall()
+            
+            return result
 def search_all_signals():
     with get_connection() as conn:
         with conn.cursor() as cursor:

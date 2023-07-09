@@ -8,8 +8,8 @@ dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 if os.path.exists(dotenv_path):
     load_dotenv(dotenv_path)
 import logging
-from fetchingdata import add_signal, block_user, check_user_status, delete_exact_signal, get_all_requested_users, get_all_unblocked_users, get_new_signals, get_or_create_user, request_signal, reset_signal_request, search_all_signals, unblock_user
-
+from fetchingdata import add_signal,get_all_users, block_user, check_user_status, delete_exact_signal, get_all_requested_users, get_all_unblocked_users, get_new_signals, get_or_create_user, request_signal, reset_signal_request, search_all_signals, unblock_user
+from telebot.apihelper import ApiTelegramException
 import telebot
 from telebot import types
 
@@ -75,8 +75,17 @@ def echo_message(message):
                 bot.send_message(chat_id=message.chat.id, text="След сообщение будет текстом уведомления для всех" )
                 user_states[message.chat.id] = "WAITING_FOR_NOTIFICATION"
             elif user_states[message.chat.id] == "WAITING_FOR_NOTIFICATION":
-                for key, value in user_states.items():
-                    bot.send_message(chat_id=key, text=message.text)
+                user_states[message.chat.id] = "NORMAL"
+
+                res = get_all_users()
+                for i in res:
+                    try:
+                        bot.send_message(chat_id=i[0], text=message.text)
+                    except ApiTelegramException as e:
+                        if e.error_code == 403:
+                            print(f"Skipped user {i[0]} due to deactivation or blocking.")
+                        else:
+                            raise  # Re-raise the exception if it's not the one we're trying to handle
                 user_states[message.chat.id] = "NORMAL"
             elif message.text == "/deletesignal":
                 res = search_all_signals()
